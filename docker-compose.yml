@@ -5,7 +5,6 @@ services:
   wazuh-manager:
     image: wazuh/wazuh-manager:4.9.2
     hostname: wazuh.manager
-    restart: always
     ulimits:
       memlock:
         soft: -1
@@ -19,7 +18,7 @@ services:
     #   - "514:514/udp"
     #   - "55000:55000"
     environment:
-      - INDEXER_URL=https://wazuh.indexer:9200
+      - INDEXER_URL=http://wazuh.indexer:9200
       - INDEXER_USERNAME=admin
       - INDEXER_PASSWORD=SecretPassword
       - FILEBEAT_SSL_VERIFICATION_MODE=full
@@ -48,7 +47,6 @@ services:
   wazuh-indexer:
     image: wazuh/wazuh-indexer:4.9.2
     hostname: wazuh.indexer
-    restart: always
     # ports:
     #   - "9200:9200"
     environment:
@@ -69,11 +67,19 @@ services:
       - ./config/wazuh_indexer_ssl_certs/admin-key.pem:/usr/share/wazuh-indexer/certs/admin-key.pem
       - ./config/wazuh_indexer/wazuh.indexer.yml:/usr/share/wazuh-indexer/opensearch.yml
       - ./config/wazuh_indexer/internal_users.yml:/usr/share/wazuh-indexer/opensearch-security/internal_users.yml
+    deploy:
+      mode: replicated
+      replicas: 1
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.ingest.rule=Host(`<ingest_domain>`)
+        - traefik.http.routers.ingest.entrypoints=wazuh
+        - traefik.http.routers.ingest.service=ingest-service
+        - traefik.http.services.ingest-service.loadbalancer.server.port=9200
 
   wazuh-dashboard:
     image: wazuh/wazuh-dashboard:4.9.2
     hostname: wazuh.dashboard
-    restart: always
     # ports:
     #   - 80:5601
     environment:
@@ -102,10 +108,32 @@ services:
       replicas: 1
       labels:
         - traefik.enable=true
-        - traefik.http.routers.wazuh.rule=Host(`wazuh.motysten.fr`)
+        - traefik.http.routers.wazuh.rule=Host(`<webui_domain>`)
         - traefik.http.routers.wazuh.entrypoints=wazuh
         - traefik.http.routers.wazuh.service=wazuh-service
         - traefik.http.services.wazuh-service.loadbalancer.server.port=5601
+
+  wazuh-logstash:
+    image: wazuh_logstash:custom
+    hostname: wazuh.logstash
+    environment:
+      - xpack.monitoring.enabled=false
+      - LS_JAVA_OPTS=-Xmx1G -Xms1G
+    depends_on:
+      - wazuh-indexer
+    volumes:
+      - ./config/wazuh_logstash:/usr/share/logstash/pipeline
+
+  wazuh-filebeat:
+    image: docker.elastic.co/beats/filebeat:7.17.25
+    hostname: wazuh.filebeat
+    user: root
+    depends_on:
+      - wazuh-logstash
+    volumes:
+      - ./config/wazuh_filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
 
   traefik:
     image: traefik:v3.2
