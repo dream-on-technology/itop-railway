@@ -1,0 +1,27 @@
+filebeat.inputs:
+  - type: aws-cloudwatch
+    log_group_arn: arn:aws:logs:eu-west-3:339712932157:log-group:/aws/apprunner/lead-orca-develop/9e69de5af4e1434eadd82ecdbfba0ff5/application
+    scan_frequency: 1m
+    access_key_id: <AWS_ACCESS_KEY_ID>
+    secret_access_key: <AWS_SECRET_ACCESS_KEY>
+    start_position: beginning
+
+filebeat.config:
+  modules:
+    path: ${path.config}/modules.d/*.yml
+    reload.enabled: false
+
+filebeat.autodiscover:
+  providers:
+    - type: docker
+      hints.enabled: true
+
+processors:
+  - add_host_metadata:
+      when.not.contains.tags: forwarded
+  - add_cloud_metadata: ~
+  - add_docker_metadata: ~
+  - add_kubernetes_metadata: ~
+
+output.logstash:
+  hosts: ["wazuh.logstash:5044"]
