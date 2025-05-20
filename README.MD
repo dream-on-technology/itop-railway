@@ -8,7 +8,7 @@ This Docker image of [iTop Community](https://www.combodo.com/itop) is specially
 Railway simplifies the deployment of web applications with an intuitive interface and seamless integrations. This image is optimized to run smoothly on Railway with minimal configuration.  
 Click the button below to deploy your own instance of iTop Community in just a few clicks:
 
-[![Deploy on Railway (TODO)](https://railway.app/button.svg)](https://railway.app/new/template?templateRepo=TODO)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/template/9Tn0yh?referralCode=8Etvkg)
 
 
 ## 🔧 Key Features of iTop Community
